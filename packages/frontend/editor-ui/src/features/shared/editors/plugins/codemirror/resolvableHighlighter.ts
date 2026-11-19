@@ -100,20 +100,22 @@ export const coloringStateField = StateField.define<DecorationSet>({
 			}
 
 			for (const txEffect of transaction.effects) {
+				// Only drop decorations on the exact same range. Adjacent ranges must stay.
 				if (txEffect.is(coloringStateEffects.removeColorEffect)) {
 					colorings = colorings.update({
-						filter: (from, to) => txEffect.value.from !== from && txEffect.value.to !== to,
+						filter: (from, to) => txEffect.value.from !== from || txEffect.value.to !== to,
 					});
 				}
 
 				if (txEffect.is(coloringStateEffects.addColorEffect)) {
 					colorings = colorings.update({
-						filter: (from, to) => txEffect.value.from !== from && txEffect.value.to !== to,
+						filter: (from, to) => txEffect.value.from !== from || txEffect.value.to !== to,
 					});
 
 					const decoration = resolvableStateToDecoration[txEffect.value.state ?? 'pending'];
 
-					if (txEffect.value.from === 0 && txEffect.value.to === 0) continue;
+					// Empty ranges (e.g. an empty resolvable) have nothing to highlight.
+					if (txEffect.value.from === txEffect.value.to) continue;
 
 					colorings = colorings.update({
 						add: [decoration.range(txEffect.value.from, txEffect.value.to)],
